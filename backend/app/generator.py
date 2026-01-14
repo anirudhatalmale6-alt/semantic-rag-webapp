@@ -1,62 +1,44 @@
 """
 Answer generation using retrieved passages.
-Uses Flan-T5 for open-source text generation.
+Uses Ollama for local LLM inference (Mistral, Llama2, etc.)
 """
-from typing import List, Dict, Any, Generator
-from transformers import T5ForConditionalGeneration, T5Tokenizer
-import torch
+import os
+import httpx
+from typing import List, Dict, Any, Generator, AsyncGenerator
 
-from app.config import GENERATION_MODEL
+from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 
 class AnswerGenerator:
     """
-    Generate answers based on retrieved context using Flan-T5.
+    Generate answers based on retrieved context using Ollama.
     """
 
-    def __init__(self, model_name: str = GENERATION_MODEL):
+    def __init__(self, base_url: str = OLLAMA_BASE_URL, model: str = OLLAMA_MODEL):
         """
         Initialize the generator.
 
         Args:
-            model_name: Name of the T5 model to use
+            base_url: Ollama API base URL
+            model: Model name (e.g., mistral, llama2, codellama)
         """
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-        self.model.to(self.device)
-        self.model.eval()
+        self.base_url = base_url.rstrip('/')
+        self.model = model
 
-    def generate(
-        self,
-        query: str,
-        passages: List[Dict[str, Any]],
-        max_length: int = 256
-    ) -> str:
-        """
-        Generate an answer based on query and retrieved passages.
-
-        Args:
-            query: User's question
-            passages: List of retrieved passages with text and metadata
-            max_length: Maximum length of generated answer
-
-        Returns:
-            Generated answer string
-        """
+    def _build_prompt(self, query: str, passages: List[Dict[str, Any]]) -> str:
+        """Build the prompt with context from retrieved passages."""
         if not passages:
-            return "No relevant documents found to answer this question."
+            return f"Question: {query}\n\nAnswer: I don't have any documents to reference for this question."
 
-        # Build context from passages
         context_parts = []
         for i, passage in enumerate(passages[:5], 1):
             source = passage.get("metadata", {}).get("source", "Unknown")
-            context_parts.append(f"[{i}] {passage['text']}")
+            context_parts.append(f"[Source {i}: {source}]\n{passage['text']}")
 
         context = "\n\n".join(context_parts)
 
-        # Create prompt for Flan-T5
-        prompt = f"""Answer the question based on the following context. If the answer cannot be found in the context, say "I cannot find the answer in the provided documents."
+        return f"""You are a helpful assistant that answers questions based on the provided context.
+Use only the information from the context to answer. If the answer cannot be found in the context, say so clearly.
 
 Context:
 {context}
@@ -65,53 +47,141 @@ Question: {query}
 
 Answer:"""
 
-        # Tokenize and generate
-        inputs = self.tokenizer(
-            prompt,
-            return_tensors="pt",
-            max_length=1024,
-            truncation=True
-        ).to(self.device)
+    def generate(
+        self,
+        query: str,
+        passages: List[Dict[str, Any]],
+        max_tokens: int = 512
+    ) -> str:
+        """
+        Generate an answer based on query and retrieved passages.
 
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_length=max_length,
-                num_beams=4,
-                early_stopping=True,
-                no_repeat_ngram_size=3
-            )
+        Args:
+            query: User's question
+            passages: List of retrieved passages with text and metadata
+            max_tokens: Maximum tokens in response
 
-        answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return answer
+        Returns:
+            Generated answer string
+        """
+        prompt = self._build_prompt(query, passages)
+
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "num_predict": max_tokens,
+                            "temperature": 0.7,
+                        }
+                    }
+                )
+                response.raise_for_status()
+                return response.json().get("response", "Failed to generate response.")
+        except httpx.ConnectError:
+            return "Error: Cannot connect to Ollama. Please ensure Ollama is running."
+        except Exception as e:
+            return f"Error generating response: {str(e)}"
 
     def generate_stream(
         self,
         query: str,
         passages: List[Dict[str, Any]],
-        max_length: int = 256
+        max_tokens: int = 512
     ) -> Generator[str, None, None]:
         """
         Generate answer with streaming output.
-        Note: True streaming requires more complex setup, this simulates it.
 
         Args:
             query: User's question
             passages: List of retrieved passages
-            max_length: Maximum length of generated answer
+            max_tokens: Maximum tokens in response
 
         Yields:
             Chunks of the generated answer
         """
-        # Generate full answer (Flan-T5 doesn't natively support streaming well)
-        answer = self.generate(query, passages, max_length)
+        prompt = self._build_prompt(query, passages)
 
-        # Simulate streaming by yielding words
-        words = answer.split()
-        for i, word in enumerate(words):
-            if i > 0:
-                yield " "
-            yield word
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                with client.stream(
+                    "POST",
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": True,
+                        "options": {
+                            "num_predict": max_tokens,
+                            "temperature": 0.7,
+                        }
+                    }
+                ) as response:
+                    response.raise_for_status()
+                    for line in response.iter_lines():
+                        if line:
+                            import json
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
+                            if data.get("done", False):
+                                break
+        except httpx.ConnectError:
+            yield "Error: Cannot connect to Ollama. Please ensure Ollama is running."
+        except Exception as e:
+            yield f"Error: {str(e)}"
+
+    async def generate_stream_async(
+        self,
+        query: str,
+        passages: List[Dict[str, Any]],
+        max_tokens: int = 512
+    ) -> AsyncGenerator[str, None]:
+        """
+        Async streaming generation for FastAPI StreamingResponse.
+
+        Args:
+            query: User's question
+            passages: List of retrieved passages
+            max_tokens: Maximum tokens in response
+
+        Yields:
+            Chunks of the generated answer
+        """
+        prompt = self._build_prompt(query, passages)
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": True,
+                        "options": {
+                            "num_predict": max_tokens,
+                            "temperature": 0.7,
+                        }
+                    }
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if line:
+                            import json
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
+                            if data.get("done", False):
+                                break
+        except httpx.ConnectError:
+            yield "Error: Cannot connect to Ollama. Please ensure Ollama is running."
+        except Exception as e:
+            yield f"Error: {str(e)}"
 
 
 # Global instance

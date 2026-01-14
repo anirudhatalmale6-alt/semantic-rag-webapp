@@ -9,17 +9,16 @@ COPY package*.json ./
 RUN npm install
 
 # Copy source code
-COPY public/ ./public/
-COPY src/ ./src/
+COPY . .
 
-# Build the app
+# Build the Angular app
 RUN npm run build
 
 # Production stage with nginx
 FROM nginx:alpine
 
 # Copy built assets
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /app/dist/rag-frontend/browser /usr/share/nginx/html
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

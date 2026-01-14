@@ -23,5 +23,6 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 # Search settings
 TOP_K = int(os.getenv("TOP_K", "5"))
 
-# Generation model (using a small open-source model for answer generation)
-GENERATION_MODEL = os.getenv("GENERATION_MODEL", "google/flan-t5-base")
+# Ollama settings
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")

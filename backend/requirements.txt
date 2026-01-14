@@ -8,5 +8,4 @@ pypdf2==3.0.1
 markdown==3.5.2
 pydantic==2.5.3
 aiofiles==23.2.1
-transformers==4.37.2
-torch==2.1.2
+httpx==0.26.0

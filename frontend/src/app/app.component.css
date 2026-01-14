@@ -1,16 +1,3 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: #0f0f1a;
-  color: #e0e0e0;
-  min-height: 100vh;
-}
-
 .app {
   max-width: 900px;
   margin: 0 auto;
@@ -28,12 +15,17 @@ body {
 
 .header h1 {
   font-size: 2.5rem;
+  font-weight: 700;
   color: #fff;
   margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .subtitle {
-  color: #888;
+  color: var(--text-muted);
   font-size: 1.1rem;
 }
 
@@ -49,7 +41,7 @@ body {
   gap: 2rem;
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Upload Section */
@@ -62,30 +54,33 @@ body {
 }
 
 .upload-btn {
-  background: #2a2a4a;
+  background: var(--surface);
   color: #fff;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   font-size: 0.95rem;
+  border: 1px solid var(--border);
 }
 
-.upload-btn:hover {
-  background: #3a3a5a;
+.upload-btn:hover:not(.disabled) {
+  background: var(--surface-hover);
+  border-color: var(--primary);
 }
 
-.upload-btn input {
-  display: none;
+.upload-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .upload-hint {
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .upload-success {
-  color: #4caf50;
+  color: var(--success);
   font-size: 0.9rem;
   width: 100%;
   margin-top: 0.5rem;
@@ -102,32 +97,38 @@ body {
   flex: 1;
   padding: 1rem 1.25rem;
   font-size: 1rem;
-  border: 2px solid #2a2a4a;
+  border: 2px solid var(--border);
   border-radius: 12px;
-  background: #1a1a2e;
+  background: var(--surface);
   color: #fff;
   outline: none;
   transition: border-color 0.2s;
+  font-family: inherit;
 }
 
 .search-input:focus {
-  border-color: #5c6bc0;
+  border-color: var(--primary);
 }
 
 .search-input::placeholder {
-  color: #666;
+  color: var(--text-muted);
+}
+
+.search-input:disabled {
+  opacity: 0.7;
 }
 
 .search-btn {
   padding: 1rem 2rem;
   font-size: 1rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #5c6bc0, #7e57c2);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s, opacity 0.2s;
+  font-family: inherit;
 }
 
 .search-btn:hover:not(:disabled) {
@@ -141,7 +142,7 @@ body {
 
 /* Error */
 .error {
-  background: #ff5252;
+  background: var(--error);
   color: #fff;
   padding: 1rem;
   border-radius: 8px;
@@ -154,25 +155,32 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Answer Section */
 .answer-section {
-  background: linear-gradient(135deg, #1e1e3f, #2a2a4a);
+  background: linear-gradient(135deg, var(--surface), var(--surface-hover));
   padding: 1.5rem;
   border-radius: 12px;
   margin-bottom: 1.5rem;
-  border: 1px solid #3a3a5a;
+  border: 1px solid var(--border);
 }
 
 .answer-section h2 {
-  font-size: 1rem;
-  color: #888;
+  font-size: 0.85rem;
+  color: var(--text-muted);
   margin-bottom: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-weight: 600;
 }
 
 .answer {
@@ -183,11 +191,12 @@ body {
 
 /* Passages Section */
 .passages-section h2 {
-  font-size: 1rem;
-  color: #888;
+  font-size: 0.85rem;
+  color: var(--text-muted);
   margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-weight: 600;
 }
 
 .passages {
@@ -197,10 +206,15 @@ body {
 }
 
 .passage {
-  background: #1a1a2e;
+  background: var(--surface);
   padding: 1.25rem;
   border-radius: 10px;
-  border: 1px solid #2a2a4a;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.passage:hover {
+  border-color: var(--primary);
 }
 
 .passage-header {
@@ -211,16 +225,16 @@ body {
 }
 
 .passage-source {
-  color: #5c6bc0;
+  color: var(--primary);
   font-weight: 500;
 }
 
 .passage-score {
-  color: #4caf50;
+  color: var(--success);
 }
 
 .passage-text {
-  color: #b0b0b0;
+  color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.95rem;
 }
@@ -229,7 +243,7 @@ body {
 .footer {
   text-align: center;
   padding: 2rem 0 1rem;
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 

@@ -1,14 +1,15 @@
 # Semantic RAG Web Application
 
-An open-source Retrieval-Augmented Generation (RAG) web application that enables semantic search over private document collections with AI-generated answers.
+An open-source Retrieval-Augmented Generation (RAG) web application that enables semantic search over private document collections with AI-generated answers powered by Ollama.
 
 ## Features
 
 - **Document Ingestion**: Upload PDF, Markdown, and text files
 - **Semantic Search**: BERT-based embeddings with FAISS vector store
-- **AI Answers**: Flan-T5 generates answers from retrieved passages
-- **Modern UI**: Clean React frontend with dark theme
+- **AI Answers**: Local LLM via Ollama (Mistral, Llama2, etc.) - no API costs
+- **Modern UI**: Angular frontend with dark theme
 - **Docker Ready**: Single `docker-compose up` deployment
+- **Fully Local**: Everything runs on your machine, no data leaves your system
 
 ## Tech Stack
 
@@ -16,43 +17,51 @@ An open-source Retrieval-Augmented Generation (RAG) web application that enables
 |-----------|------------|
 | Embeddings | Sentence-Transformers (all-MiniLM-L6-v2) |
 | Vector Store | FAISS |
-| Generation | Flan-T5-base |
+| LLM | Ollama (Mistral by default) |
 | Backend | FastAPI + Python |
-| Frontend | React |
+| Frontend | Angular 17 |
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### Prerequisites
+
+- Docker and Docker Compose installed
+- At least 8GB RAM (4GB minimum for Ollama)
+- ~10GB disk space for models
+
+### 1. Clone and Start
 
 ```bash
-# Clone and start
-git clone <repo-url>
-cd semantic-rag
-
-# Build and run
+git clone https://github.com/anirudhatalmale6-alt/semantic-rag-webapp.git
+cd semantic-rag-webapp
 docker-compose up --build
-
-# Access the app at http://localhost:3000
-# API available at http://localhost:8000
 ```
 
-### Local Development
+### 2. Pull the Mistral Model
 
-**Backend:**
+After containers start, pull the Mistral model (one-time setup):
+
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+docker exec -it rag-ollama ollama pull mistral
 ```
 
-**Frontend:**
+This downloads ~4GB. You can also use other models:
 ```bash
-cd frontend
-npm install
-npm start
+docker exec -it rag-ollama ollama pull llama2
+docker exec -it rag-ollama ollama pull codellama
 ```
+
+### 3. Access the Application
+
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:8000
+- **Ollama**: http://localhost:11434
+
+## Using the Application
+
+1. **Upload Documents**: Click "Upload Document" to add PDF, Markdown, or text files
+2. **Ask Questions**: Type a question in the search box
+3. **View Results**: See the AI-generated answer and source passages with relevance scores
 
 ## API Reference
 
@@ -88,13 +97,6 @@ curl -X POST http://localhost:8000/search \
   -d '{"query": "What is machine learning?", "top_k": 5}'
 ```
 
-### Search with Streaming Answer
-```bash
-curl -X POST http://localhost:8000/search/stream \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Explain the main concepts"}'
-```
-
 ### Clear Index
 ```bash
 curl -X DELETE http://localhost:8000/clear
@@ -102,20 +104,29 @@ curl -X DELETE http://localhost:8000/clear
 
 ## Configuration
 
-Environment variables (set in `.env` or `docker-compose.yml`):
+Environment variables in `docker-compose.yml`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence transformer model |
-| `GENERATION_MODEL` | `google/flan-t5-base` | Text generation model |
+| `OLLAMA_BASE_URL` | `http://ollama:11434` | Ollama API URL |
+| `OLLAMA_MODEL` | `mistral` | LLM model for answer generation |
 | `CHUNK_SIZE` | `500` | Characters per chunk |
 | `CHUNK_OVERLAP` | `50` | Overlap between chunks |
 | `TOP_K` | `5` | Default search results |
 
+### Changing the LLM Model
+
+To use a different model (e.g., Llama2):
+
+1. Pull the model: `docker exec -it rag-ollama ollama pull llama2`
+2. Update `OLLAMA_MODEL` in docker-compose.yml to `llama2`
+3. Restart: `docker-compose restart backend`
+
 ## Project Structure
 
 ```
-semantic-rag/
+semantic-rag-webapp/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py          # FastAPI endpoints
@@ -123,14 +134,18 @@ semantic-rag/
 │   │   ├── chunker.py       # Text chunking
 │   │   ├── document_loader.py # PDF/MD/TXT loading
 │   │   ├── vector_store.py  # FAISS operations
-│   │   └── generator.py     # Answer generation
+│   │   └── generator.py     # Ollama LLM integration
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── App.js           # Main React component
-│   │   └── App.css          # Styles
-│   ├── public/
+│   │   ├── app/
+│   │   │   ├── app.component.ts
+│   │   │   ├── app.component.html
+│   │   │   ├── app.component.css
+│   │   │   └── api.service.ts
+│   │   └── environments/
+│   ├── angular.json
 │   ├── package.json
 │   ├── nginx.conf
 │   └── Dockerfile
@@ -138,11 +153,48 @@ semantic-rag/
 └── README.md
 ```
 
+## Local Development
+
+### Backend
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Make sure Ollama is running locally
+export OLLAMA_BASE_URL=http://localhost:11434
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+ng serve
+```
+
 ## Performance
 
-- **Latency**: < 2 seconds per query on CPU (10k document corpus)
-- **Accuracy**: 90%+ relevance for typical queries
-- **Memory**: ~2GB RAM for models + index
+- **Latency**: 2-10 seconds per query depending on model and hardware
+- **Accuracy**: High relevance for typical queries
+- **Memory**: ~6GB RAM (2GB backend + 4GB Ollama)
+
+## Troubleshooting
+
+### "Cannot connect to Ollama"
+- Ensure Ollama container is running: `docker ps`
+- Check if model is pulled: `docker exec -it rag-ollama ollama list`
+
+### Slow responses
+- First query after startup may be slow (model loading)
+- Consider using a smaller model like `tinyllama`
+
+### Out of memory
+- Reduce Ollama memory: edit `deploy.resources.reservations.memory` in docker-compose.yml
+- Use a smaller model
 
 ## License
 

@@ -1,0 +1,90 @@
+<div class="app">
+  <header class="header">
+    <h1>Semantic RAG Search</h1>
+    <p class="subtitle">Search your documents with AI-powered semantic understanding</p>
+  </header>
+
+  <main class="main">
+    <!-- Stats -->
+    @if (stats()) {
+      <div class="stats">
+        <span>Documents indexed: {{ stats()!.total_documents }}</span>
+        <span>Model: {{ stats()!.model_name }}</span>
+      </div>
+    }
+
+    <!-- Upload Section -->
+    <section class="upload-section">
+      <label class="upload-btn" [class.disabled]="uploading()">
+        {{ uploading() ? 'Uploading...' : 'Upload Document' }}
+        <input
+          type="file"
+          accept=".pdf,.md,.markdown,.txt,.text"
+          (change)="onFileSelected($event)"
+          [disabled]="uploading()"
+          hidden
+        >
+      </label>
+      <span class="upload-hint">Supports PDF, Markdown, and Text files</span>
+      @if (uploadMessage()) {
+        <div class="upload-success">{{ uploadMessage() }}</div>
+      }
+    </section>
+
+    <!-- Search Form -->
+    <div class="search-form">
+      <input
+        type="text"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        (keypress)="onKeyPress($event)"
+        placeholder="Ask a question about your documents..."
+        class="search-input"
+        [disabled]="loading()"
+      >
+      <button
+        class="search-btn"
+        (click)="search()"
+        [disabled]="loading() || !query().trim()"
+      >
+        {{ loading() ? 'Searching...' : 'Search' }}
+      </button>
+    </div>
+
+    <!-- Error -->
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+
+    <!-- Results -->
+    @if (results()) {
+      <div class="results">
+        <!-- Generated Answer -->
+        <section class="answer-section">
+          <h2>Answer</h2>
+          <p class="answer">{{ results()!.answer }}</p>
+        </section>
+
+        <!-- Source Passages -->
+        <section class="passages-section">
+          <h2>Source Passages</h2>
+          <div class="passages">
+            @for (result of results()!.results; track $index) {
+              <div class="passage">
+                <div class="passage-header">
+                  <span class="passage-source">{{ result.metadata['source'] }}</span>
+                  <span class="passage-score">Score: {{ formatScore(result.score) }}</span>
+                </div>
+                <p class="passage-text">{{ result.text }}</p>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    }
+  </main>
+
+  <footer class="footer">
+    <p>Open-source Semantic RAG Application powered by Ollama</p>
+  </footer>
+</div>
