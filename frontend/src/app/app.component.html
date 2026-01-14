@@ -19,13 +19,13 @@
         {{ uploading() ? 'Uploading...' : 'Upload Document' }}
         <input
           type="file"
-          accept=".pdf,.md,.markdown,.txt,.text"
+          accept=".pdf,.docx,.xlsx,.pptx,.md,.markdown,.txt,.text,.csv,.json,.html,.htm"
           (change)="onFileSelected($event)"
           [disabled]="uploading()"
           hidden
         >
       </label>
-      <span class="upload-hint">Supports PDF, Markdown, and Text files</span>
+      <span class="upload-hint">PDF, Word, Excel, PowerPoint, Text, Markdown, CSV, JSON, HTML</span>
       @if (uploadMessage()) {
         <div class="upload-success">{{ uploadMessage() }}</div>
       }

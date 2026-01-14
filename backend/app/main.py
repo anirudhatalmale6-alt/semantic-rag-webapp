@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.config import DATA_DIR
-from app.document_loader import load_document
+from app.document_loader import load_document, get_supported_extensions
 from app.chunker import chunk_text
 from app.vector_store import get_vector_store
 from app.generator import get_generator
@@ -78,21 +78,28 @@ async def get_stats():
     return store.get_stats()
 
 
+@app.get("/formats")
+async def get_formats():
+    """Get list of supported document formats."""
+    return {"supported_formats": get_supported_extensions()}
+
+
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest_document(file: UploadFile = File(...)):
     """
-    Ingest a document (PDF, Markdown, or Text file).
+    Ingest a document.
 
-    Accepts file upload, extracts text, chunks it, and adds to vector store.
+    Supported formats: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx),
+    Text, Markdown, CSV, JSON, HTML.
     """
     # Validate file extension
-    allowed_extensions = {'.pdf', '.md', '.markdown', '.txt', '.text'}
+    allowed_extensions = set(get_supported_extensions())
     file_ext = Path(file.filename).suffix.lower()
 
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {file_ext}. Supported: {allowed_extensions}"
+            detail=f"Unsupported file type: {file_ext}. Supported: {sorted(allowed_extensions)}"
         )
 
     # Save uploaded file temporarily

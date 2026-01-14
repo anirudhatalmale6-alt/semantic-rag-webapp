@@ -1,15 +1,29 @@
 # Semantic RAG Web Application
 
-An open-source Retrieval-Augmented Generation (RAG) web application that enables semantic search over private document collections with AI-generated answers powered by Ollama.
+An open-source Retrieval-Augmented Generation (RAG) web application that enables semantic search over any document type with AI-generated answers powered by Ollama.
 
 ## Features
 
-- **Document Ingestion**: Upload PDF, Markdown, and text files
+- **Multi-Format Document Support**: PDF, Word, Excel, PowerPoint, Text, Markdown, CSV, JSON, HTML
 - **Semantic Search**: BERT-based embeddings with FAISS vector store
 - **AI Answers**: Local LLM via Ollama (Mistral, Llama2, etc.) - no API costs
 - **Modern UI**: Angular frontend with dark theme
 - **Docker Ready**: Single `docker-compose up` deployment
 - **Fully Local**: Everything runs on your machine, no data leaves your system
+
+## Supported Document Formats
+
+| Format | Extensions |
+|--------|------------|
+| PDF | `.pdf` |
+| Microsoft Word | `.docx` |
+| Microsoft Excel | `.xlsx` |
+| Microsoft PowerPoint | `.pptx` |
+| Plain Text | `.txt`, `.text` |
+| Markdown | `.md`, `.markdown` |
+| CSV | `.csv` |
+| JSON | `.json` |
+| HTML | `.html`, `.htm` |
 
 ## Tech Stack
 
@@ -59,7 +73,7 @@ docker exec -it rag-ollama ollama pull codellama
 
 ## Using the Application
 
-1. **Upload Documents**: Click "Upload Document" to add PDF, Markdown, or text files
+1. **Upload Documents**: Click "Upload Document" to add any supported file type
 2. **Ask Questions**: Type a question in the search box
 3. **View Results**: See the AI-generated answer and source passages with relevance scores
 
@@ -75,19 +89,30 @@ curl http://localhost:8000/
 curl http://localhost:8000/stats
 ```
 
+### Get Supported Formats
+```bash
+curl http://localhost:8000/formats
+```
+
 ### Ingest Document
 ```bash
 # Upload a PDF
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@document.pdf"
+curl -X POST http://localhost:8000/ingest -F "file=@document.pdf"
 
-# Upload a text file
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@notes.txt"
+# Upload a Word document
+curl -X POST http://localhost:8000/ingest -F "file=@report.docx"
 
-# Upload markdown
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@readme.md"
+# Upload an Excel file
+curl -X POST http://localhost:8000/ingest -F "file=@data.xlsx"
+
+# Upload a PowerPoint
+curl -X POST http://localhost:8000/ingest -F "file=@presentation.pptx"
+
+# Upload CSV
+curl -X POST http://localhost:8000/ingest -F "file=@data.csv"
+
+# Upload JSON
+curl -X POST http://localhost:8000/ingest -F "file=@config.json"
 ```
 
 ### Search Documents
@@ -132,7 +157,7 @@ semantic-rag-webapp/
 │   │   ├── main.py          # FastAPI endpoints
 │   │   ├── config.py        # Configuration
 │   │   ├── chunker.py       # Text chunking
-│   │   ├── document_loader.py # PDF/MD/TXT loading
+│   │   ├── document_loader.py # Multi-format document loading
 │   │   ├── vector_store.py  # FAISS operations
 │   │   └── generator.py     # Ollama LLM integration
 │   ├── requirements.txt
